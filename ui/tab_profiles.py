@@ -165,18 +165,26 @@ def render_profiles_tab():
                                     st.warning("Yeterli NLP verisi (yetenek kelimesi) bulunamadı.")
                     with c_rep2:
                         if st.button("🔄 Mevcut İlanları LLM ile Yeniden Analiz Et", key=f"reanalyze_{p}"):
-                            with st.spinner("Mevcut ilanlar Yapay Zeka ile yeniden okunuyor... (Bu işlem Llama/Gemini hızına bağlı olarak sürebilir)"):
-                                from nlp_extractor import SkillExtractor
-                                extractor = SkillExtractor()
-                                jobs = db.get_jobs_by_profile(p)
-                                success_count = 0
-                                for job in jobs:
-                                    skills = extractor.extract_skills(job.get("description", ""))
-                                    if skills:
-                                        job["extracted_skills"] = skills
-                                        db.save_job(job, p)
-                                        success_count += 1
-                                st.success(f"{len(jobs)} ilandan {success_count} tanesi başarıyla yapay zekadan geçirildi. Şimdi 'Raporu Çiz' butonuna basabilirsiniz!")
+                            from nlp_extractor import SkillExtractor
+                            extractor = SkillExtractor()
+                            jobs = db.get_jobs_by_profile(p)
+                            success_count = 0
+                            
+                            progress_bar = st.progress(0)
+                            status_text = st.empty()
+                            
+                            for i, job in enumerate(jobs):
+                                status_text.text(f"İlanlar analiz ediliyor... {i+1} / {len(jobs)} (API Kotası için yavaş ilerler)")
+                                skills = extractor.extract_skills(job.get("description", ""))
+                                if skills:
+                                    job["extracted_skills"] = skills
+                                    db.save_job(job, p)
+                                    success_count += 1
+                                progress_bar.progress((i + 1) / len(jobs))
+                                
+                            status_text.empty()
+                            progress_bar.empty()
+                            st.success(f"{len(jobs)} ilandan {success_count} tanesi başarıyla yapay zekadan geçirildi. Şimdi 'Raporu Çiz' butonuna basabilirsiniz!")
                 else:
                     st.info("Bu profil için henüz ilan toplanmadı. Yukarıdan 'Manuel Tarama Yap' butonuna basın.")
                     

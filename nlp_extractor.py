@@ -28,23 +28,29 @@ def get_category_for_skill(skill):
 def get_nlp_model():
     return spacy.load("en_core_web_sm")
 
+import time
+
 def extract_with_llm(text, provider, api_key, model_name):
     prompt = f"""You are an expert technical recruiter and HR data analyst.
 Analyze the following job description. Your specific task is to locate the sections that list candidate requirements (such as "Qualifications", "Requirements", "Yetkinlikler", "İstenilen Özellikler", "Aranan Nitelikler") and extract ONLY the technical skills, tools, software, methodologies, and certifications required from the candidate.
 
 RULES:
-1. DO NOT extract technologies mentioned merely as part of the company description (e.g. "Our product is built with React" -> do not extract React unless they ask the candidate to know React).
-2. DO NOT include soft skills (e.g. "communication", "leadership", "teamwork", "analytical thinking").
-3. Extract specific hard skills and tools (e.g. "AutoCAD", "Python", "GMP", "ISO 9001", "HPLC", "SAP", "React", "AWS").
+1. DO NOT extract technologies mentioned merely as part of the company description.
+2. DO NOT include soft skills (e.g. "communication", "leadership", "teamwork").
+3. Extract specific hard skills and tools across any industry (e.g. "Python", "SEO", "AutoCAD", "UFRS", "Photoshop", "SAP", "B2B Sales", "GMP").
 4. Output the final result strictly as a raw JSON list of strings. DO NOT add markdown formatting, code blocks, or any other explanations.
 
 Example Valid Output:
-["AutoCAD", "GMP", "ISO 9001", "SAP", "SolidWorks"]
+["AutoCAD", "SAP", "SolidWorks", "B2B Sales", "SEO"]
 
 Job Description:
 {text}
 """
     try:
+        # Throttle to avoid free tier rate limits (e.g. Gemini 15 RPM)
+        if provider == "google-genai":
+            time.sleep(4)
+            
         if provider == "ollama":
             from openai import OpenAI
             client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
