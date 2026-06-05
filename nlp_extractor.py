@@ -217,22 +217,34 @@ class SkillExtractor:
         text_lower = text.lower()
         found_skills = set()
         
-        # Kapsamlı Kimya, Mühendislik ve Kalite yetenekleri sözlüğü
+        # Kapsamlı Kimya, Mühendislik, Kalite ve Bilişim (IT) yetenekleri sözlüğü
         LOCAL_SKILLS_DB = [
+            # Kimya & Üretim & Kalite & Mühendislik
             "autocad", "solidworks", "matlab", "gmp", "glp", "haccp", 
             "iso 9001", "iso 14001", "iso 22000", "iso 13485", "ohsas",
             "kalite kontrol", "kalite güvence", "ar-ge", "r&d", "hplc", 
             "gc", "spektroskopi", "titrasyon", "formülasyon", "üretim planlama",
-            "sap", "erp", "ms office", "excel", "python", "c++", "veri analizi",
-            "yalın üretim", "6 sigma", "six sigma", "kozmetik", "ilaç", 
-            "polimer", "petrokimya", "iş güvenliği", "çevre mevzuatı", 
-            "gıda güvenliği", "process engineering", "chemical engineering",
-            "optimization", "troubleshooting", "lean manufacturing", "5s",
-            "kaizen", "ppap", "apqp", "fmea", "spc", "msa", "ce belgelendirme",
+            "sap", "erp", "ms office", "excel", "yalın üretim", "6 sigma", 
+            "six sigma", "kozmetik", "ilaç", "polimer", "petrokimya", 
+            "iş güvenliği", "çevre mevzuatı", "gıda güvenliği", "process engineering", 
+            "chemical engineering", "optimization", "troubleshooting", "lean manufacturing", 
+            "5s", "kaizen", "ppap", "apqp", "fmea", "spc", "msa", "ce belgelendirme",
             "iyi üretim uygulamaları", "iyi laboratuvar uygulamaları", "api",
             "cgmp", "tse", "fda", "reach", "msds", "sds", "kimyasal analiz",
             "mikrobiyoloji", "biyokimya", "organik kimya", "analitik kimya",
-            "enstrümantal analiz", "kalibrasyon", "validasyon"
+            "enstrümantal analiz", "kalibrasyon", "validasyon",
+            
+            # Bilişim, Yazılım, Veri & IT
+            "python", "c++", "c#", "java", "javascript", "typescript", "html", "css",
+            "react", "angular", "vue", "node.js", "django", "flask", "spring boot",
+            "sql", "mysql", "postgresql", "mongodb", "nosql", "oracle", "veri analizi",
+            "machine learning", "yapay zeka", "data science", "data engineering",
+            "aws", "azure", "google cloud", "gcp", "docker", "kubernetes", "ci/cd",
+            "git", "github", "gitlab", "jira", "scrum", "agile", "linux", "bash",
+            "rest api", "graphql", "devops", "qa", "yazılım testi", "selenium",
+            "cybersecurity", "siber güvenlik", "network", "tcp/ip", "bulut bilişim",
+            "php", "ruby", "swift", "kotlin", "flutter", "react native", "mobile development",
+            "frontend", "backend", "fullstack", "ui/ux", "figma", "veri tabanı"
         ]
         
         import re
