@@ -78,9 +78,31 @@ def init_db() -> None:
             conn.execute("ALTER TABLE loadouts ADD COLUMN title_must_exclude TEXT DEFAULT ''")
         except sqlite3.OperationalError:
             pass
+            
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS skill_categories (
+                skill TEXT PRIMARY KEY,
+                category TEXT
+            )
+        """)
         
         # Initialize api_settings if empty
         conn.execute("INSERT OR IGNORE INTO api_settings (id, provider, api_key, model_name) VALUES (1, 'spacy', '', '')")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Skill Categories
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_skill_category(skill: str) -> str:
+    with _connect() as conn:
+        row = conn.execute("SELECT category FROM skill_categories WHERE skill = ?", (skill,)).fetchone()
+        if row:
+            return row["category"]
+        return None
+
+def save_skill_category(skill: str, category: str):
+    with _connect() as conn:
+        conn.execute("INSERT OR REPLACE INTO skill_categories (skill, category) VALUES (?, ?)", (skill, category))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

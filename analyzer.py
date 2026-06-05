@@ -1,6 +1,7 @@
 from collections import Counter
 import itertools
-from nlp_extractor import get_category_for_skill
+from nlp_extractor import get_category_for_skill, categorize_skills_bulk
+import database as db
 import re
 
 def analyze_skills(job_skills_list):
@@ -25,11 +26,42 @@ def analyze_skills(job_skills_list):
 def analyze_categories(freqs):
     """
     Groups skills by category and returns their total frequencies.
+    Uses DB caching and LLM batch categorization for unknown skills.
     """
     cat_freq = Counter()
+    
+    # 1. Check DB for all skills
+    unknown_skills = []
+    skill_to_cat = {}
+    
+    for skill in freqs.keys():
+        cat = db.get_skill_category(skill)
+        if cat:
+            skill_to_cat[skill] = cat
+        else:
+            unknown_skills.append(skill)
+            
+    # 2. If there are unknown skills, ask LLM in bulk
+    if unknown_skills:
+        # Only categorize the top 50 most frequent unknown skills to save time/tokens
+        # Sort unknown skills by their frequency
+        unknown_skills_sorted = sorted(unknown_skills, key=lambda s: freqs[s], reverse=True)
+        top_unknown = unknown_skills_sorted[:50]
+        
+        new_cats = categorize_skills_bulk(top_unknown)
+        skill_to_cat.update(new_cats)
+        
+        # Any remaining unknown skills (beyond 50) get fallback
+        for s in unknown_skills_sorted[50:]:
+            cat = get_category_for_skill(s)
+            skill_to_cat[s] = cat
+            db.save_skill_category(s, cat)
+
+    # 3. Sum up frequencies
     for skill, count in freqs.items():
-        cat = get_category_for_skill(skill)
+        cat = skill_to_cat.get(skill, "Diğer")
         cat_freq[cat] += count
+        
     return cat_freq
 
 def extract_experience(title, description):

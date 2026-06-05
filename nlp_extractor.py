@@ -94,6 +94,104 @@ Job Description:
         print(f"LLM Extraction Error ({provider}): {e}")
         return None
 
+def categorize_skills_bulk(skills: list) -> dict:
+    """Takes a list of unknown skills, asks LLM to categorize them, and saves to DB."""
+    if not skills:
+        return {}
+        
+    api_settings = db.get_api_settings()
+    provider = api_settings.get("provider", "spacy")
+    api_key = api_settings.get("api_key", "")
+    model_name = api_settings.get("model_name", "")
+    
+    if provider == "spacy" or (provider != "ollama" and not api_key):
+        # Fallback if no LLM
+        result = {}
+        for s in skills:
+            cat = get_category_for_skill(s)
+            result[s] = cat
+            db.save_skill_category(s, cat)
+        return result
+
+    prompt = f"""You are an expert HR data analyst. Group the following technical skills into one of these 6 broad categories:
+1. "Yazılım Dilleri"
+2. "Veritabanı & Veri Depolama"
+3. "Bulut & DevOps"
+4. "Veri & Yapay Zeka"
+5. "Mühendislik & Kalite" (Use this for AutoCAD, SolidWorks, GMP, ISO 9001, SAP, HPLC, Lab tools, Chemistry, Mechanical, etc.)
+6. "Diğer" (Only if it doesn't fit any above)
+
+Output ONLY a raw JSON dictionary mapping each skill to its category string. Do NOT add markdown, code blocks, or explanations.
+Example Output:
+{{"python": "Yazılım Dilleri", "autocad": "Mühendislik & Kalite", "gmp": "Mühendislik & Kalite"}}
+
+Skills to categorize:
+{json.dumps(skills)}
+"""
+    try:
+        if provider == "ollama":
+            from openai import OpenAI
+            client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+            model = model_name if model_name else "llama3"
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0
+            )
+            content = response.choices[0].message.content
+        elif provider == "openai":
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            model = model_name if model_name else "gpt-3.5-turbo"
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.0
+            )
+            content = response.choices[0].message.content
+        elif provider == "google-genai":
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            model = model_name if model_name else "gemini-2.5-flash"
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+            )
+            content = response.text
+        else:
+            raise ValueError("Invalid provider")
+
+        content = content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+            
+        parsed = json.loads(content.strip())
+        result = {}
+        for k, v in parsed.items():
+            result[k.lower()] = v
+            db.save_skill_category(k.lower(), v)
+            
+        # Any missing skills default to Diğer
+        for s in skills:
+            if s.lower() not in result:
+                result[s.lower()] = "Diğer"
+                db.save_skill_category(s.lower(), "Diğer")
+                
+        return result
+    except Exception as e:
+        print(f"LLM Categorization Error: {e}")
+        result = {}
+        for s in skills:
+            cat = get_category_for_skill(s)
+            result[s] = cat
+            db.save_skill_category(s, cat)
+        return result
+
+
 class SkillExtractor:
     def __init__(self):
         # Spacy fallback init
