@@ -142,10 +142,6 @@ def _render_save_profile(linkedin_country: str, selected_city: str):
     st.sidebar.markdown("---")
     st.sidebar.subheader("💾 Ayarları Profile Kaydet")
     
-    st.sidebar.markdown("**Performans ve Limit Ayarları**")
-    st.sidebar.number_input("Maksimum İlan Sayısı", min_value=1, max_value=200, key="limit_jobs", help="Bir taramada en fazla kaç ilan çekileceğini belirler.")
-    st.sidebar.slider("İstekler Arası Gecikme (Sn)", min_value=1.0, max_value=10.0, key="delay_seconds", step=0.5, help="Engellenmemek için iki istek arasında beklenecek süre.")
-    
     st.sidebar.text_input(
         "Profil Adı", key="loadout_name_input", placeholder="Örn: Frontend-TR"
     )
