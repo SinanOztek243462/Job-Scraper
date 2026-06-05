@@ -166,8 +166,20 @@ def render_profiles_tab():
                                     
                     with c_rep2:
                         if st.button("🗑️ Bu Profildeki İlanları Sil (Sıfırla)", key=f"clear_jobs_btn_{p}", type="secondary"):
+                            # Get URLs before deleting to remove them from seen_jobs cache
+                            from utils.scrape_runner import load_seen_urls, save_seen_urls
+                            jobs_to_delete = db.get_jobs_by_profile(p)
+                            urls_to_delete = {j.get("url") for j in jobs_to_delete if j.get("url")}
+                            
+                            # Delete from DB
                             deleted = db.delete_jobs_by_profile(p)
-                            st.toast(f"{deleted} adet eski/hayalet ilan veritabanından silindi!")
+                            
+                            # Remove from seen cache so they can be scraped again
+                            seen_urls = load_seen_urls()
+                            new_seen = {url for url in seen_urls if url not in urls_to_delete}
+                            save_seen_urls(new_seen)
+                            
+                            st.toast(f"{deleted} adet eski/hayalet ilan veritabanından silindi ve önbellekten temizlendi!")
                             import time
                             time.sleep(1)
                             st.rerun()
