@@ -32,16 +32,22 @@ import time
 
 def extract_with_llm(text, provider, api_key, model_name):
     prompt = f"""You are an expert technical recruiter and HR data analyst.
-Analyze the following job description. Your specific task is to locate the sections that list candidate requirements (such as "Qualifications", "Requirements", "Yetkinlikler", "İstenilen Özellikler", "Aranan Nitelikler") and extract ONLY the technical skills, tools, software, methodologies, and certifications required from the candidate.
+Analyze the following job description. Your task is to locate the exact sections that list candidate requirements (look for headers like "GENEL NİTELİKLER VE İŞ TANIMI", "Pozisyona başvuran adayda olması beklenen özellikler", "Qualifications", "What We Look For?", "Minimum Requirements", "Senden Neler Bekliyoruz?", "Requirements").
+
+1. Extract the raw text block of these requirements for training purposes.
+2. Extract the specific hard technical skills/tools from this text.
 
 RULES:
-1. DO NOT extract technologies mentioned merely as part of the company description.
-2. DO NOT include soft skills (e.g. "communication", "leadership", "teamwork").
-3. Extract specific hard skills and tools across any industry (e.g. "Python", "SEO", "AutoCAD", "UFRS", "Photoshop", "SAP", "B2B Sales", "GMP").
-4. Output the final result strictly as a raw JSON list of strings. DO NOT add markdown formatting, code blocks, or any other explanations.
+- DO NOT extract technologies mentioned merely as part of the company description.
+- DO NOT include soft skills (e.g. "communication", "leadership").
+- Output the final result strictly as a raw JSON object with two keys: "skills" (list of strings) and "qualifications_text" (string containing the exact raw text block).
+- DO NOT add markdown formatting, code blocks, or any other explanations.
 
 Example Valid Output:
-["AutoCAD", "SAP", "SolidWorks", "B2B Sales", "SEO"]
+{{
+  "skills": ["AutoCAD", "SAP", "B2B Sales", "SEO"],
+  "qualifications_text": "Üniversitelerin ilgili bölümlerinden mezun, B2B Sales deneyimi olan, AutoCAD ve SAP programlarına hakim..."
+}}
 
 Job Description:
 {text}
@@ -93,8 +99,11 @@ Job Description:
             content = content[:-3]
         
         parsed = json.loads(content.strip())
-        if isinstance(parsed, list):
-            return [str(item).lower() for item in parsed]
+        if isinstance(parsed, dict) and "skills" in parsed and "qualifications_text" in parsed:
+            parsed["skills"] = [str(item).lower() for item in parsed["skills"]]
+            return parsed
+        elif isinstance(parsed, list):
+            return {"skills": [str(item).lower() for item in parsed], "qualifications_text": ""}
         return None
     except Exception as e:
         print(f"LLM Extraction Error ({provider}): {e}")
@@ -214,9 +223,11 @@ class SkillExtractor:
             api_key = api_settings.get("api_key", "")
             model_name = api_settings.get("model_name", "")
             if provider == "ollama" or api_key:
-                llm_skills = extract_with_llm(text, provider, api_key, model_name)
-                if llm_skills is not None:
-                    return list(set(llm_skills))
+                llm_result = extract_with_llm(text, provider, api_key, model_name)
+                if llm_result is not None:
+                    # Return dict directly
+                    llm_result["skills"] = list(set(llm_result.get("skills", [])))
+                    return llm_result
 
         # Fallback to Spacy
         doc = self.nlp(text)
@@ -227,7 +238,7 @@ class SkillExtractor:
             span = doc[start:end]
             found_skills.add(span.text.lower())
             
-        return list(found_skills)
+        return {"skills": list(found_skills), "qualifications_text": ""}
 
 if __name__ == "__main__":
     extractor = SkillExtractor()

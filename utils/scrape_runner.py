@@ -111,8 +111,12 @@ def process_and_save_jobs(jobs: list, profile: str, progress_bar=None) -> tuple:
     saved_count = 0
 
     for idx, job in enumerate(jobs):
-        skills = extractor.extract_skills(job.get("description", ""))
+        result = extractor.extract_skills(job.get("description", ""))
+        skills = result.get("skills", []) if isinstance(result, dict) else result
+        qualifications_text = result.get("qualifications_text", "") if isinstance(result, dict) else ""
+        
         job["extracted_skills"] = skills
+        job["qualifications_text"] = qualifications_text
 
         seniority, min_years = extract_experience(job.get("title", ""), job.get("description", ""))
         job["seniority_level"] = seniority

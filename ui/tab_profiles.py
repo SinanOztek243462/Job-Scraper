@@ -175,9 +175,13 @@ def render_profiles_tab():
                             
                             for i, job in enumerate(jobs):
                                 status_text.text(f"İlanlar analiz ediliyor... {i+1} / {len(jobs)} (API Kotası için yavaş ilerler)")
-                                skills = extractor.extract_skills(job.get("description", ""))
-                                if skills:
+                                result = extractor.extract_skills(job.get("description", ""))
+                                skills = result.get("skills", []) if isinstance(result, dict) else result
+                                qualifications_text = result.get("qualifications_text", "") if isinstance(result, dict) else ""
+                                
+                                if skills or qualifications_text:
                                     job["extracted_skills"] = skills
+                                    job["qualifications_text"] = qualifications_text
                                     db.save_job(job, p)
                                     success_count += 1
                                 progress_bar.progress((i + 1) / len(jobs))
@@ -185,6 +189,40 @@ def render_profiles_tab():
                             status_text.empty()
                             progress_bar.empty()
                             st.success(f"{len(jobs)} ilandan {success_count} tanesi başarıyla yapay zekadan geçirildi. Şimdi 'Raporu Çiz' butonuna basabilirsiniz!")
+                            
+                    st.markdown("---")
+                    
+                    # Eğitim Verisi Dışa Aktarma
+                    jobs_with_text = [j for j in jobs if j.get("qualifications_text")]
+                    if jobs_with_text:
+                        import json
+                        st.subheader("📚 Eğitim Verisi (Training Data)")
+                        st.info(f"{len(jobs_with_text)} adet ilandan saf 'Aranan Nitelikler / Qualifications' metinleri çekildi.")
+                        
+                        export_data = []
+                        for j in jobs_with_text:
+                            export_data.append({
+                                "title": j.get("title", ""),
+                                "company": j.get("company", ""),
+                                "skills": j.get("extracted_skills", []),
+                                "qualifications_text": j.get("qualifications_text", "")
+                            })
+                            
+                        json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+                        st.download_button(
+                            label="📥 Eğitim Verisini İndir (.JSON)",
+                            data=json_str,
+                            file_name=f"{p}_training_data.json",
+                            mime="application/json"
+                        )
+                        
+                        with st.expander("Göz At: Çıkarılan Ham Metinler"):
+                            for j in jobs_with_text[:5]:
+                                st.markdown(f"**{j.get('title')} ({j.get('company')})**")
+                                st.write(j.get("qualifications_text"))
+                                st.markdown("---")
+                            if len(jobs_with_text) > 5:
+                                st.write(f"...ve {len(jobs_with_text) - 5} ilan daha.")
                 else:
                     st.info("Bu profil için henüz ilan toplanmadı. Yukarıdan 'Manuel Tarama Yap' butonuna basın.")
                     

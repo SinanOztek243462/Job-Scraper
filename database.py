@@ -74,6 +74,11 @@ def init_db() -> None:
         except sqlite3.OperationalError:
             pass
         try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN qualifications_text TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
+
+        try:
             conn.execute("ALTER TABLE loadouts ADD COLUMN title_must_include TEXT DEFAULT ''")
             conn.execute("ALTER TABLE loadouts ADD COLUMN title_must_exclude TEXT DEFAULT ''")
         except sqlite3.OperationalError:
