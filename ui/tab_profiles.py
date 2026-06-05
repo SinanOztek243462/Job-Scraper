@@ -165,7 +165,7 @@ def render_profiles_tab():
                                     st.warning("Yeterli NLP verisi (yetenek kelimesi) bulunamadı.")
                                     
                     with c_rep2:
-                        if st.button("🗑️ Bu Profildeki İlanları Sil (Sıfırla)", key=f"clear_{p}", type="secondary"):
+                        if st.button("🗑️ Bu Profildeki İlanları Sil (Sıfırla)", key=f"clear_jobs_btn_{p}", type="secondary"):
                             deleted = db.delete_jobs_by_profile(p)
                             st.toast(f"{deleted} adet eski/hayalet ilan veritabanından silindi!")
                             import time
