@@ -52,62 +52,68 @@ Example Valid Output:
 Job Description:
 {text}
 """
-    try:
-        # Throttle to avoid free tier rate limits (e.g. Gemini 15 RPM)
-        if provider == "google-genai":
-            time.sleep(4)
+    # API isteğini 429 hatalarına karşı tekrar deneyen (retry) döngü
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if provider == "ollama":
+                from openai import OpenAI
+                client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+                model = model_name if model_name else "llama3"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.0
+                )
+                content = response.choices[0].message.content
+            elif provider == "openai":
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key)
+                model = model_name if model_name else "gpt-3.5-turbo"
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.0
+                )
+                content = response.choices[0].message.content
+            elif provider == "google-genai":
+                from google import genai
+                client = genai.Client(api_key=api_key)
+                model = model_name if model_name else "gemini-2.5-flash"
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                )
+                content = response.text
+            else:
+                return None
+                
+            # Try to parse JSON from the LLM output
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
             
-        if provider == "ollama":
-            from openai import OpenAI
-            client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
-            model = model_name if model_name else "llama3"
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0
-            )
-            content = response.choices[0].message.content
-        elif provider == "openai":
-            from openai import OpenAI
-            client = OpenAI(api_key=api_key)
-            model = model_name if model_name else "gpt-3.5-turbo"
-            response = client.chat.completions.create(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0
-            )
-            content = response.choices[0].message.content
-        elif provider == "google-genai":
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            model = model_name if model_name else "gemini-2.5-flash"
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-            )
-            content = response.text
-        else:
+            parsed = json.loads(content.strip())
+            if isinstance(parsed, dict) and "skills" in parsed and "qualifications_text" in parsed:
+                parsed["skills"] = [str(item).lower() for item in parsed["skills"]]
+                return parsed
+            elif isinstance(parsed, list):
+                return {"skills": [str(item).lower() for item in parsed], "qualifications_text": ""}
             return None
-
-        # Try to parse JSON from the LLM output
-        content = content.strip()
-        if content.startswith("```json"):
-            content = content[7:]
-        if content.startswith("```"):
-            content = content[3:]
-        if content.endswith("```"):
-            content = content[:-3]
-        
-        parsed = json.loads(content.strip())
-        if isinstance(parsed, dict) and "skills" in parsed and "qualifications_text" in parsed:
-            parsed["skills"] = [str(item).lower() for item in parsed["skills"]]
-            return parsed
-        elif isinstance(parsed, list):
-            return {"skills": [str(item).lower() for item in parsed], "qualifications_text": ""}
-        return None
-    except Exception as e:
-        print(f"LLM Extraction Error ({provider}): {e}")
-        return None
+            
+        except Exception as api_err:
+            err_str = str(api_err).lower()
+            if "429" in err_str or "exhausted" in err_str or "quota" in err_str:
+                if attempt < max_retries - 1:
+                    import time
+                    time.sleep(5) # Kotaya takılırsak 5 saniye bekle
+                    continue
+            print(f"LLM Extraction Error ({provider}): {api_err}")
+            return None
 
 def categorize_skills_bulk(skills: list) -> dict:
     """Takes a list of unknown skills, asks LLM to categorize them, and saves to DB."""
