@@ -213,9 +213,41 @@ class SkillExtractor:
                     llm_result["skills"] = list(set(llm_result.get("skills", [])))
                     return llm_result
 
-        # Yapay Zeka kapalıysa veya hata verirse, sisteme zorla IT kelimeleri
-        # enjekte etmemek için boş dönüyoruz.
-        return {"skills": [], "qualifications_text": ""}
+        # LOCAL OFFLINE KEYWORD SCANNER (CHEMISTRY & ENGINEERING FOCUS)
+        text_lower = text.lower()
+        found_skills = set()
+        
+        # Kapsamlı Kimya, Mühendislik ve Kalite yetenekleri sözlüğü
+        LOCAL_SKILLS_DB = [
+            "autocad", "solidworks", "matlab", "gmp", "glp", "haccp", 
+            "iso 9001", "iso 14001", "iso 22000", "iso 13485", "ohsas",
+            "kalite kontrol", "kalite güvence", "ar-ge", "r&d", "hplc", 
+            "gc", "spektroskopi", "titrasyon", "formülasyon", "üretim planlama",
+            "sap", "erp", "ms office", "excel", "python", "c++", "veri analizi",
+            "yalın üretim", "6 sigma", "six sigma", "kozmetik", "ilaç", 
+            "polimer", "petrokimya", "iş güvenliği", "çevre mevzuatı", 
+            "gıda güvenliği", "process engineering", "chemical engineering",
+            "optimization", "troubleshooting", "lean manufacturing", "5s",
+            "kaizen", "ppap", "apqp", "fmea", "spc", "msa", "ce belgelendirme",
+            "iyi üretim uygulamaları", "iyi laboratuvar uygulamaları", "api",
+            "cgmp", "tse", "fda", "reach", "msds", "sds", "kimyasal analiz",
+            "mikrobiyoloji", "biyokimya", "organik kimya", "analitik kimya",
+            "enstrümantal analiz", "kalibrasyon", "validasyon"
+        ]
+        
+        import re
+        for skill in LOCAL_SKILLS_DB:
+            # Word boundary regex to avoid partial matches (e.g. finding 'api' in 'capital')
+            pattern = r'\b' + re.escape(skill) + r'\b'
+            if re.search(pattern, text_lower):
+                # Capitalize nicely for display
+                display_skill = skill.upper() if len(skill) <= 4 else skill.title()
+                found_skills.add(display_skill)
+                
+        return {
+            "skills": list(found_skills),
+            "qualifications_text": "Lokale (çevrimdışı) kelime tarama motoru ile analiz edilmiştir. Ücretsiz ve sınırsızdır."
+        }
 
 if __name__ == "__main__":
     extractor = SkillExtractor()
