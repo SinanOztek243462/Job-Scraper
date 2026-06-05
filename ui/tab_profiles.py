@@ -163,7 +163,17 @@ def render_profiles_tab():
                                     _render_results(freqs, co_occurrences, seniorities, experience_years)
                                 else:
                                     st.warning("Yeterli NLP verisi (yetenek kelimesi) bulunamadı.")
+                                    
                     with c_rep2:
+                        if st.button("🗑️ Bu Profildeki İlanları Sil (Sıfırla)", key=f"clear_{p}", type="secondary"):
+                            deleted = db.delete_jobs_by_profile(p)
+                            st.toast(f"{deleted} adet eski/hayalet ilan veritabanından silindi!")
+                            import time
+                            time.sleep(1)
+                            st.rerun()
+                            
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        
                         if st.button("🔄 Mevcut İlanları LLM ile Yeniden Analiz Et", key=f"reanalyze_{p}"):
                             from nlp_extractor import SkillExtractor
                             extractor = SkillExtractor()

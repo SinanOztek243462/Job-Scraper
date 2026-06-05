@@ -234,29 +234,40 @@ def update_bot_params(name: str, limit_jobs: int, delay_seconds: float) -> None:
 # Jobs CRUD
 # ─────────────────────────────────────────────────────────────────────────────
 
-def save_job(job: dict, profile: str) -> None:
-    """İlanı DB'ye kaydeder; URL zaten varsa sessizce atlar (IGNORE)."""
+def save_job(job_data: dict, profile_name: str) -> None:
+    """Tek bir iş ilanını (ve çıkarsanan yetenekleri) kaydeder/günceller."""
     with _connect() as conn:
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO jobs
-                (url, title, company, location, description,
-                 extracted_skills, experience_years, seniority_level, search_profile)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                job.get("url"),
-                job.get("title"),
-                job.get("company"),
-                job.get("location", "Worldwide"),
-                job.get("description"),
-                ",".join(job.get("extracted_skills", [])),
-                job.get("experience_years"),
-                job.get("seniority_level"),
-                profile,
-            ),
-        )
+        conn.execute("""
+            INSERT INTO jobs (url, title, company, location, description, extracted_skills, qualifications_text, experience_years, seniority_level, search_profile)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(url) DO UPDATE SET
+                title = excluded.title,
+                company = excluded.company,
+                location = excluded.location,
+                description = excluded.description,
+                extracted_skills = excluded.extracted_skills,
+                qualifications_text = excluded.qualifications_text,
+                experience_years = excluded.experience_years,
+                seniority_level = excluded.seniority_level,
+                search_profile = excluded.search_profile
+        """, (
+            job_data.get("url"),
+            job_data.get("title"),
+            job_data.get("company"),
+            job_data.get("location"),
+            job_data.get("description"),
+            json.dumps(job_data.get("extracted_skills", [])),
+            job_data.get("qualifications_text", ""),
+            job_data.get("experience_years"),
+            job_data.get("seniority_level"),
+            profile_name
+        ))
 
+def delete_jobs_by_profile(profile_name: str) -> int:
+    """Belirtilen profile ait tüm iş ilanlarını veritabanından siler ve silinen ilan sayısını döner."""
+    with _connect() as conn:
+        cursor = conn.execute("DELETE FROM jobs WHERE search_profile = ?", (profile_name,))
+        return cursor.rowcount
 
 def get_jobs_by_profile(profile: str) -> list[dict]:
     """Belirtilen profile ait tüm ilanları liste olarak döner."""

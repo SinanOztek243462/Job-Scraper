@@ -4,24 +4,9 @@ import streamlit as st
 import json
 import database as db
 
-# Legacy Fallback Categories for Spacy
-SKILL_CATEGORIES = {
-    "Yazılım Dilleri": ["python", "java", "javascript", "c++", "c#", "go", "rust", "ruby", "typescript", "r", "scala", "kotlin", "swift"],
-    "Veritabanı & Veri Depolama": ["sql", "nosql", "mongodb", "postgresql", "mysql", "oracle", "redis", "elasticsearch", "snowflake", "bigquery", "redshift"],
-    "Bulut & DevOps": ["docker", "kubernetes", "aws", "azure", "gcp", "google cloud", "ci/cd", "jenkins", "gitlab", "github actions", "linux", "bash", "shell", "terraform", "ansible", "git"],
-    "Veri & Yapay Zeka": ["machine learning", "deep learning", "ai", "nlp", "data science", "data engineering", "spark", "hadoop", "kafka", "pandas", "numpy", "scikit-learn", "tensorflow", "pytorch"],
-    "Web & Çatı (Framework)": ["react", "node.js", "vue", "angular", "django", "flask", "spring", "spring boot", "html", "css", "flutter", "react native", "graphql", "rest api", "soap", "microservices", "fastapi"],
-    "Veri Görselleştirme": ["tableau", "power bi", "looker", "excel", "d3.js", "chart.js"]
-}
-
-TECH_SKILLS = []
-for skills in SKILL_CATEGORIES.values():
-    TECH_SKILLS.extend(skills)
-
 def get_category_for_skill(skill):
-    for category, skills in SKILL_CATEGORIES.items():
-        if skill.lower() in skills:
-            return category
+    # Fallback function if DB is empty and LLM is off. 
+    # Just return "Diğer" instead of forcing into IT categories.
     return "Diğer"
 
 @st.cache_resource
@@ -110,7 +95,8 @@ Job Description:
             if "429" in err_str or "exhausted" in err_str or "quota" in err_str:
                 if attempt < max_retries - 1:
                     import time
-                    time.sleep(5) # Kotaya takılırsak 5 saniye bekle
+                    print(f"API Quota hit (429). Waiting 65 seconds before retry {attempt+1}/{max_retries}...")
+                    time.sleep(65) # Free tier is 15 RPM. Wait >60s to reset quota.
                     continue
             print(f"LLM Extraction Error ({provider}): {api_err}")
             return None
@@ -134,17 +120,13 @@ def categorize_skills_bulk(skills: list) -> dict:
             db.save_skill_category(s, cat)
         return result
 
-    prompt = f"""You are an expert HR data analyst. Group the following technical skills into one of these 6 broad categories:
-1. "Yazılım Dilleri"
-2. "Veritabanı & Veri Depolama"
-3. "Bulut & DevOps"
-4. "Veri & Yapay Zeka"
-5. "Mühendislik & Kalite" (Use this for AutoCAD, SolidWorks, GMP, ISO 9001, SAP, HPLC, Lab tools, Chemistry, Mechanical, etc.)
-6. "Diğer" (Only if it doesn't fit any above)
+    prompt = f"""You are an expert HR data analyst. Group the following technical skills into dynamic, logical, profession-appropriate categories based on the actual skills provided.
+
+Do NOT force them into software/IT categories if they are not software skills. For example, if you see chemistry or manufacturing skills, create categories like "Laboratuvar & Kimya", "Kalite & Standartlar", "Üretim", etc. If you see business skills, create "Satış & Pazarlama", "Finans", etc. Create at most 6 distinct categories.
 
 Output ONLY a raw JSON dictionary mapping each skill to its category string. Do NOT add markdown, code blocks, or explanations.
 Example Output:
-{{"python": "Yazılım Dilleri", "autocad": "Mühendislik & Kalite", "gmp": "Mühendislik & Kalite"}}
+{{"python": "Yazılım Dilleri", "autocad": "Tasarım & Çizim", "gmp": "Kalite & Yönetim", "hplc": "Laboratuvar"}}
 
 Skills to categorize:
 {json.dumps(skills)}
