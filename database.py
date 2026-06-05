@@ -87,7 +87,7 @@ def init_db() -> None:
         """)
         
         # Initialize api_settings if empty
-        conn.execute("INSERT OR IGNORE INTO api_settings (id, provider, api_key, model_name) VALUES (1, 'spacy', '', '')")
+        conn.execute("INSERT OR IGNORE INTO api_settings (id, provider, api_key, model_name) VALUES (1, 'google-genai', '', 'gemini-2.5-flash')")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Skill Categories

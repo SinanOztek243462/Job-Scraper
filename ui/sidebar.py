@@ -187,12 +187,12 @@ def _render_api_settings():
     
     current_settings = db.get_api_settings()
     
-    provider_options = ["spacy", "ollama", "google-genai", "openai"]
+    provider_options = ["google-genai", "ollama", "openai", "spacy"]
     provider_labels = {
-        "spacy": "Standart Kelime Eşleştirme (Eski)",
+        "google-genai": "Google Gemini API (Önerilen - Ücretsiz)",
         "ollama": "Ollama (Yerel/Offline - Ücretsiz)",
-        "google-genai": "Google Gemini API (Ücretsiz)",
-        "openai": "OpenAI / DeepSeek API (Ücretli/Key)"
+        "openai": "OpenAI / DeepSeek API (Ücretli/Key)",
+        "spacy": "Standart Kelime Eşleştirme (Eski)"
     }
     
     idx = 0
@@ -209,12 +209,20 @@ def _render_api_settings():
     api_key = current_settings["api_key"]
     model_name = current_settings["model_name"]
     
-    if selected_provider in ["google-genai", "openai"]:
+    if selected_provider == "google-genai":
+        st.sidebar.info("💡 **Nasıl Ücretsiz Kullanılır?**\n1. [Google AI Studio](https://aistudio.google.com/app/apikey)'ya gidin.\n2. Ücretsiz 'Create API Key' butonuna basın.\n3. Aldığınız uzun şifreyi aşağıya yapıştırın.")
+        api_key = st.sidebar.text_input("Gemini API Anahtarı (Zorunlu)", value=api_key, type="password")
+        model_name = st.sidebar.text_input(
+            "Model Adı", 
+            value=model_name if model_name else "gemini-2.5-flash", 
+            placeholder="örn: gemini-2.5-flash"
+        )
+    elif selected_provider == "openai":
         api_key = st.sidebar.text_input("API Anahtarı (Zorunlu)", value=api_key, type="password")
         model_name = st.sidebar.text_input(
             "Model Adı", 
             value=model_name, 
-            placeholder="örn: gemini-2.5-flash veya deepseek-chat"
+            placeholder="örn: gpt-3.5-turbo veya deepseek-chat"
         )
     elif selected_provider == "ollama":
         model_name = st.sidebar.text_input(
@@ -222,7 +230,7 @@ def _render_api_settings():
             value=model_name if model_name else "llama3", 
             placeholder="örn: llama3 veya deepseek-r1"
         )
-        st.sidebar.info("Ollama'nın arka planda (localhost:11434) çalıştığından emin olun.")
+        st.sidebar.warning("⚠️ Kullanıcıların bilgisayarına [Ollama](https://ollama.com/) indirip arka planda çalıştırması gerekir.")
         
     if st.sidebar.button("💾 API Ayarlarını Kaydet"):
         db.update_api_settings(selected_provider, api_key, model_name)
