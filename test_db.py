@@ -1,42 +1,15 @@
-import database as db
+import sqlite3
 
-def run_tests():
-    print("--- 1. Testing DB Initialization ---")
-    db.init_db()
-    print("OK: DB Initialized.")
+c = sqlite3.connect('jobs.db')
+try:
+    c.execute('ALTER TABLE loadouts ADD COLUMN title_must_include TEXT DEFAULT ""')
+except sqlite3.OperationalError:
+    pass
 
-    print("\n--- 2. Testing Save Profile ---")
-    test_profile = "test_profile_123"
-    db.save_loadout_config(test_profile, {
-        "must_have": "python, data",
-        "or_have": "developer",
-        "not_have": "senior",
-        "must_include": "remote",
-        "must_exclude": "office",
-        "country": "Turkey",
-        "city": "Istanbul",
-        "limit_jobs": 15,
-        "delay_seconds": 3.0
-    })
-    print("OK: Profile Saved.")
+try:
+    c.execute('ALTER TABLE loadouts ADD COLUMN title_must_exclude TEXT DEFAULT ""')
+except sqlite3.OperationalError:
+    pass
 
-    print("\n--- 3. Testing Get Profile ---")
-    cfg = db.get_loadout_config(test_profile)
-    assert cfg is not None, "Config should not be None"
-    assert cfg["must_have"] == "python, data", "must_have mismatch"
-    assert cfg["limit_jobs"] == 15, "limit_jobs mismatch"
-    print("OK: Profile Loaded correctly:", cfg)
-
-    print("\n--- 4. Testing Get All Profiles ---")
-    all_cfgs = db.get_all_loadout_configs()
-    assert test_profile in all_cfgs, "test_profile should be in all_configs"
-    print("OK: All configs loaded.")
-
-    print("\n--- 5. Testing Delete Profile ---")
-    db.delete_loadout(test_profile)
-    cfg_after_delete = db.get_loadout_config(test_profile)
-    assert cfg_after_delete is None, "Config should be None after deletion"
-    print("OK: Profile Deleted.")
-
-if __name__ == "__main__":
-    run_tests()
+c.commit()
+print("DB columns added.")

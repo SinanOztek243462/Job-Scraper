@@ -28,17 +28,17 @@ def build_query_string(must_have: str, or_have: str, not_have: str) -> str:
 
     if or_list:
         if len(or_list) > 1:
-            query_parts.append("(" + " OR ".join([f'"{w}"' for w in or_list]) + ")")
+            query_parts.append("(" + " OR ".join([f'{w}' for w in or_list]) + ")")
         else:
-            query_parts.append(f'"{or_list[0]}"')
+            query_parts.append(f'{or_list[0]}')
 
     if must_list:
-        query_parts.append(" AND ".join([f'"{w}"' for w in must_list]))
+        query_parts.append(" AND ".join([f'{w}' for w in must_list]))
 
     query_str = " AND ".join(query_parts)
 
     if not_list:
-        not_str = " ".join([f'NOT "{w}"' for w in not_list])
+        not_str = " ".join([f'NOT {w}' for w in not_list])
         if query_str:
             query_str += " " + not_str
         else:
@@ -71,17 +71,30 @@ def save_seen_urls(seen: set) -> None:
         json.dump(list(seen), f)
 
 
-def apply_filters(jobs: list, must_include: str, must_exclude: str) -> list:
+def apply_filters(jobs: list, must_include: str, must_exclude: str, title_must_include: str = "", title_must_exclude: str = "") -> list:
     """İlan listesini include/exclude filtrelerine göre süzer."""
     inc = [w.strip().lower() for w in must_include.split(",") if w.strip()] if must_include else []
     exc = [w.strip().lower() for w in must_exclude.split(",") if w.strip()] if must_exclude else []
+    t_inc = [w.strip().lower() for w in title_must_include.split(",") if w.strip()] if title_must_include else []
+    t_exc = [w.strip().lower() for w in title_must_exclude.split(",") if w.strip()] if title_must_exclude else []
+    
     result = []
     for job in jobs:
         text = (job.get("title", "") + " " + job.get("description", "")).lower()
+        title_text = job.get("title", "").lower()
+        
+        # Title filters
+        if t_inc and not all(w in title_text for w in t_inc):
+            continue
+        if t_exc and any(w in title_text for w in t_exc):
+            continue
+            
+        # Description (global) filters
         if inc and not all(w in text for w in inc):
             continue
         if exc and any(w in text for w in exc):
             continue
+            
         result.append(job)
     return result
 
@@ -137,6 +150,8 @@ def run_scrape_for_profile(profile: str, show_ui: bool = True) -> int:
     delay = float(cfg.get("delay_seconds", 2.0))
     must_include = cfg.get("must_include", "")
     must_exclude = cfg.get("must_exclude", "")
+    title_must_include = cfg.get("title_must_include", "")
+    title_must_exclude = cfg.get("title_must_exclude", "")
 
     seen_urls = load_seen_urls()
 
@@ -160,6 +175,6 @@ def run_scrape_for_profile(profile: str, show_ui: bool = True) -> int:
         new_seen.add(job["url"])
     save_seen_urls(new_seen)
 
-    filtered = apply_filters(raw_jobs, must_include, must_exclude)
+    filtered = apply_filters(raw_jobs, must_include, must_exclude, title_must_include, title_must_exclude)
     _, _, _, saved = process_and_save_jobs(filtered, profile)
     return saved

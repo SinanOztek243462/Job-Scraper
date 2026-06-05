@@ -16,6 +16,8 @@ def _init_session_defaults():
         "not_have": "",
         "must_include": "",
         "must_exclude": "",
+        "title_must_include": "",
+        "title_must_exclude": "",
         "country_key": "Dünya Geneli (Worldwide)",
         "city_key": "Hepsi",
         "loadout_name_input": "",
@@ -42,6 +44,8 @@ def _load_loadout(name: str, all_configs: dict):
 
     st.session_state.must_include = cfg.get("must_include", "")
     st.session_state.must_exclude = cfg.get("must_exclude", "")
+    st.session_state.title_must_include = cfg.get("title_must_include", "")
+    st.session_state.title_must_exclude = cfg.get("title_must_exclude", "")
     st.session_state.country_key = REVERSE_COUNTRY_MAP.get(cfg.get("country", "Worldwide"), "Dünya Geneli (Worldwide)")
     st.session_state.city_key = cfg.get("city", "Hepsi")
     st.session_state.loadout_name_input = name
@@ -96,6 +100,8 @@ def _render_profile_manager(all_configs: dict):
             st.session_state.not_have = ""
             st.session_state.must_include = ""
             st.session_state.must_exclude = ""
+            st.session_state.title_must_include = ""
+            st.session_state.title_must_exclude = ""
             st.rerun()
     st.sidebar.markdown("---")
 
@@ -111,9 +117,13 @@ def _render_search_settings() -> tuple:
 
     st.sidebar.markdown("---")
 
-    st.sidebar.subheader("📌 İlan İçi Metin Filtreleri")
-    st.sidebar.text_input("Şunları İÇERSİN", key="must_include", placeholder="örn: visa, relocation")
-    st.sidebar.text_input("Şunları İÇERMESİN", key="must_exclude", placeholder="örn: part-time, clearance")
+    st.sidebar.subheader("📌 BAŞLIK İçi Metin Filtreleri")
+    st.sidebar.text_input("Başlık Şunları İÇERSİN", key="title_must_include", placeholder="örn: kimya, mühendis")
+    st.sidebar.text_input("Başlık Şunları İÇERMESİN", key="title_must_exclude", placeholder="örn: asistan, stajyer")
+
+    st.sidebar.subheader("📌 İLAN İçi Metin Filtreleri")
+    st.sidebar.text_input("Açıklama Şunları İÇERSİN", key="must_include", placeholder="örn: visa, relocation")
+    st.sidebar.text_input("Açıklama Şunları İÇERMESİN", key="must_exclude", placeholder="örn: part-time, clearance")
     st.sidebar.markdown("---")
 
     st.sidebar.subheader("🌍 Konum Ayarı")
@@ -154,6 +164,8 @@ def _render_save_profile(linkedin_country: str, selected_city: str):
                 "not_have": st.session_state.not_have,
                 "must_include": st.session_state.must_include,
                 "must_exclude": st.session_state.must_exclude,
+                "title_must_include": st.session_state.title_must_include,
+                "title_must_exclude": st.session_state.title_must_exclude,
                 "country": linkedin_country,
                 "city": selected_city,
                 "limit_jobs": st.session_state.limit_jobs,
@@ -168,6 +180,54 @@ def _render_save_profile(linkedin_country: str, selected_city: str):
             st.sidebar.error("Lütfen bir isim girin!")
 
 
+def _render_api_settings():
+    """Yapay Zeka API Ayarlarını (LLM) yönetir."""
+    st.sidebar.markdown("---")
+    st.sidebar.header("🧠 Yapay Zeka & API Ayarları")
+    
+    current_settings = db.get_api_settings()
+    
+    provider_options = ["spacy", "ollama", "google-genai", "openai"]
+    provider_labels = {
+        "spacy": "Standart Kelime Eşleştirme (Eski)",
+        "ollama": "Ollama (Yerel/Offline - Ücretsiz)",
+        "google-genai": "Google Gemini API (Ücretsiz)",
+        "openai": "OpenAI / DeepSeek API (Ücretli/Key)"
+    }
+    
+    idx = 0
+    if current_settings["provider"] in provider_options:
+        idx = provider_options.index(current_settings["provider"])
+        
+    selected_provider_label = st.sidebar.selectbox(
+        "Yetenek Çıkarma Motoru", 
+        [provider_labels[p] for p in provider_options],
+        index=idx
+    )
+    selected_provider = provider_options[[provider_labels[p] for p in provider_options].index(selected_provider_label)]
+    
+    api_key = current_settings["api_key"]
+    model_name = current_settings["model_name"]
+    
+    if selected_provider in ["google-genai", "openai"]:
+        api_key = st.sidebar.text_input("API Anahtarı (Zorunlu)", value=api_key, type="password")
+        model_name = st.sidebar.text_input(
+            "Model Adı", 
+            value=model_name, 
+            placeholder="örn: gemini-2.5-flash veya deepseek-chat"
+        )
+    elif selected_provider == "ollama":
+        model_name = st.sidebar.text_input(
+            "Ollama Model Adı", 
+            value=model_name if model_name else "llama3", 
+            placeholder="örn: llama3 veya deepseek-r1"
+        )
+        st.sidebar.info("Ollama'nın arka planda (localhost:11434) çalıştığından emin olun.")
+        
+    if st.sidebar.button("💾 API Ayarlarını Kaydet"):
+        db.update_api_settings(selected_provider, api_key, model_name)
+        st.sidebar.success("Yapay zeka motoru ayarları güncellendi!")
+
 def render_sidebar() -> dict:
     """
     Tüm sidebar'ı çizer.
@@ -179,6 +239,7 @@ def render_sidebar() -> dict:
     _render_profile_manager(all_configs)
     location, linkedin_country, selected_city = _render_search_settings()
     _render_save_profile(linkedin_country, selected_city)
+    _render_api_settings()
 
     final_query = build_query_string(st.session_state.must_have, st.session_state.or_have, st.session_state.not_have)
 
@@ -187,6 +248,8 @@ def render_sidebar() -> dict:
         "location": location,
         "must_include": st.session_state.must_include,
         "must_exclude": st.session_state.must_exclude,
+        "title_must_include": st.session_state.title_must_include,
+        "title_must_exclude": st.session_state.title_must_exclude,
         "active_profile": st.session_state.loadout_name_input.strip(),
         "linkedin_country": linkedin_country,
         "selected_city": selected_city,

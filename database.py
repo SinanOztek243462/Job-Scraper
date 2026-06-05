@@ -54,6 +54,12 @@ def init_db() -> None:
                 limit_jobs    INTEGER,
                 delay_seconds REAL
             );
+            CREATE TABLE IF NOT EXISTS api_settings (
+                id             INTEGER PRIMARY KEY CHECK (id = 1),
+                provider       TEXT DEFAULT 'spacy',
+                api_key        TEXT DEFAULT '',
+                model_name     TEXT DEFAULT ''
+            );
         """)
         try:
             conn.execute("ALTER TABLE loadouts ADD COLUMN must_have TEXT DEFAULT ''")
@@ -67,7 +73,33 @@ def init_db() -> None:
             conn.execute("ALTER TABLE loadouts ADD COLUMN last_scan_time DATETIME DEFAULT NULL")
         except sqlite3.OperationalError:
             pass
+        try:
+            conn.execute("ALTER TABLE loadouts ADD COLUMN title_must_include TEXT DEFAULT ''")
+            conn.execute("ALTER TABLE loadouts ADD COLUMN title_must_exclude TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
+        
+        # Initialize api_settings if empty
+        conn.execute("INSERT OR IGNORE INTO api_settings (id, provider, api_key, model_name) VALUES (1, 'spacy', '', '')")
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API Settings
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_api_settings() -> dict:
+    with _connect() as conn:
+        row = conn.execute("SELECT provider, api_key, model_name FROM api_settings WHERE id = 1").fetchone()
+        if row:
+            return dict(row)
+        return {"provider": "spacy", "api_key": "", "model_name": ""}
+
+def update_api_settings(provider: str, api_key: str, model_name: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE api_settings SET provider = ?, api_key = ?, model_name = ? WHERE id = 1",
+            (provider, api_key, model_name)
+        )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Loadout CRUD
@@ -79,8 +111,8 @@ def save_loadout_config(name: str, config: dict) -> None:
         conn.execute(
             """
             INSERT OR REPLACE INTO loadouts
-                (name, query_rows, must_have, or_have, not_have, must_include, must_exclude, country, city, limit_jobs, delay_seconds, auto_scan, auto_scan_interval)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (name, query_rows, must_have, or_have, not_have, must_include, must_exclude, country, city, limit_jobs, delay_seconds, auto_scan, auto_scan_interval, title_must_include, title_must_exclude)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
@@ -96,6 +128,8 @@ def save_loadout_config(name: str, config: dict) -> None:
                 config.get("delay_seconds", 2.0),
                 int(config.get("auto_scan", 0)),
                 config.get("auto_scan_interval", 60),
+                config.get("title_must_include", ""),
+                config.get("title_must_exclude", ""),
             ),
         )
 
