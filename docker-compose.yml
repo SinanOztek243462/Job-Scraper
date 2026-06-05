@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  job-scrater:
+    build: .
+    container_name: job-scrater
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./jobs.db:/app/jobs.db
+      - ./seen_jobs.json:/app/seen_jobs.json
