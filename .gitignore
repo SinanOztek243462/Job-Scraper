@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.exe
+*.out
+*.log
+*.zip
+.vscode/
+.idea/
+.gemini/
+jobs.db
+seen_jobs.json
+*.pdf
+skill_network.html
