@@ -193,7 +193,8 @@ def render_profiles_tab():
                     st.markdown("---")
                     
                     # Eğitim Verisi Dışa Aktarma
-                    jobs_with_text = [j for j in jobs if j.get("qualifications_text")]
+                    all_jobs = db.get_jobs_by_profile(p)
+                    jobs_with_text = [j for j in all_jobs if j.get("qualifications_text")]
                     if jobs_with_text:
                         import json
                         st.subheader("📚 Eğitim Verisi (Training Data)")
