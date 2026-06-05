@@ -66,8 +66,8 @@ def render_profiles_tab():
         job_count = db.get_job_count_by_profile(p)
         
         with st.expander(f"📁 Profil: **{p}** ({job_count} İlan)", expanded=False):
-            # Üst Butonlar (Düzenle, Tara, Sil)
-            c1, c2, c3, c4 = st.columns([1, 1.2, 1.2, 1])
+            # Üst Butonlar (Düzenle, Tara, Oto-Tara, Temizle, Sil)
+            c1, c2, c3, c4, c5 = st.columns([1, 1.2, 1.2, 1.2, 1])
             
             with c1:
                 if st.button("✏️ Ayarları Düzenle", key=f"edit_{p}", help="Bu profilin ayarlarını sol menüye yükler."):
@@ -83,15 +83,59 @@ def render_profiles_tab():
                         st.warning("Yeni ilan bulunamadı.")
                         
             with c3:
+                is_auto = bool(all_profiles[p].get("auto_scan", 0))
+                # toggle_auto_scan fonksiyonunu ui değiştikçe tetikleyeceğiz
+                new_auto = st.toggle("🤖 Oto-Tarama", value=is_auto, key=f"auto_{p}", help="Arka planda periyodik olarak tarama yapar.")
+                if new_auto != is_auto:
+                    db.toggle_auto_scan(p, new_auto)
+                    st.rerun()
+                        
+            with c4:
                 if st.button("🧹 İlanları Temizle", key=f"clear_{p}", help="Bu profildeki eski ilanları veritabanından siler."):
                     db.clear_jobs_for_profile(p)
                     st.rerun()
                 
-            with c4:
+            with c5:
                 if st.button("🗑️ Profili Sil", key=f"del_{p}"):
                     db.delete_loadout(p)
                     st.rerun()
                     
+            if is_auto:
+                st.info("🤖 **Oto-Tarama Aktif:** Arka plan işçisi (bot) belirlenen ayarlarla otomatik çalışacak.")
+                c_int1, c_int2, c_int3 = st.columns(3)
+                
+                with c_int1:
+                    current_interval = int(all_profiles[p].get("auto_scan_interval", 60))
+                    new_interval = st.number_input(
+                        "Çalışma Aralığı (Dakika)", 
+                        min_value=1, max_value=1440, 
+                        value=current_interval, 
+                        key=f"interval_{p}"
+                    )
+                    if new_interval != current_interval:
+                        db.update_auto_scan_interval(p, new_interval)
+                        
+                with c_int2:
+                    current_limit = int(all_profiles[p].get("limit_jobs", 20))
+                    new_limit = st.number_input(
+                        "Maksimum İlan Sayısı",
+                        min_value=1, max_value=200,
+                        value=current_limit,
+                        key=f"limit_{p}"
+                    )
+                    
+                with c_int3:
+                    current_delay = float(all_profiles[p].get("delay_seconds", 2.0))
+                    new_delay = st.number_input(
+                        "Gecikme (Sn)",
+                        min_value=1.0, max_value=10.0, step=0.5,
+                        value=current_delay,
+                        key=f"delay_{p}"
+                    )
+                    
+                if new_limit != current_limit or new_delay != current_delay:
+                    db.update_bot_params(p, new_limit, new_delay)
+                        
             st.markdown("---")
             
             # İç Sekmeler: Analiz vs Ham Veri

@@ -14,7 +14,7 @@ def _scanner_loop():
             
             for name, cfg in configs.items():
                 if cfg.get("auto_scan", 0):
-                    interval_hours = cfg.get("auto_scan_interval", 1)
+                    interval_minutes = cfg.get("auto_scan_interval", 60)
                     last_scan_str = cfg.get("last_scan_time")
                     
                     should_scan = False
@@ -28,7 +28,7 @@ def _scanner_loop():
                             # Better: let's just parse it directly.
                             last_scan = datetime.datetime.strptime(last_scan_str, "%Y-%m-%d %H:%M:%S")
                             delta = datetime.datetime.utcnow() - last_scan # CURRENT_TIMESTAMP is UTC
-                            if delta.total_seconds() >= interval_hours * 3600:
+                            if delta.total_seconds() >= interval_minutes * 60:
                                 should_scan = True
                         except ValueError:
                             should_scan = True

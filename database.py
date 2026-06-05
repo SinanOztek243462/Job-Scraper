@@ -152,6 +152,22 @@ def update_last_scan_time(name: str) -> None:
     with _connect() as conn:
         conn.execute("UPDATE loadouts SET last_scan_time = CURRENT_TIMESTAMP WHERE name = ?", (name,))
 
+def toggle_auto_scan(name: str, is_active: bool) -> None:
+    """Belirtilen profil için oto-taramayı açar veya kapatır."""
+    val = 1 if is_active else 0
+    with _connect() as conn:
+        conn.execute("UPDATE loadouts SET auto_scan = ? WHERE name = ?", (val, name))
+
+def update_auto_scan_interval(name: str, interval: int) -> None:
+    """Oto-tarama çalışma sıklığını (dakika) günceller."""
+    with _connect() as conn:
+        conn.execute("UPDATE loadouts SET auto_scan_interval = ? WHERE name = ?", (interval, name))
+
+def update_bot_params(name: str, limit_jobs: int, delay_seconds: float) -> None:
+    """Oto-tarama bot limitlerini (limit_jobs, delay_seconds) günceller."""
+    with _connect() as conn:
+        conn.execute("UPDATE loadouts SET limit_jobs = ?, delay_seconds = ? WHERE name = ?", (limit_jobs, delay_seconds, name))
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Jobs CRUD

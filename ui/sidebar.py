@@ -146,11 +146,6 @@ def _render_save_profile(linkedin_country: str, selected_city: str):
     st.sidebar.number_input("Maksimum İlan Sayısı", min_value=1, max_value=200, key="limit_jobs", help="Bir taramada en fazla kaç ilan çekileceğini belirler.")
     st.sidebar.slider("İstekler Arası Gecikme (Sn)", min_value=1.0, max_value=10.0, key="delay_seconds", step=0.5, help="Engellenmemek için iki istek arasında beklenecek süre.")
     
-    st.sidebar.markdown("**Arka Plan Oto-Tarama (Daemon)**")
-    st.sidebar.toggle("Bu profili otomatik tara", key="auto_scan", help="Arka plan işçisi bu profil için belirlenen aralıklarla otomatik tarama yapar.")
-    if st.session_state.auto_scan:
-        st.sidebar.number_input("Çalışma Aralığı (Saat)", min_value=1, max_value=24, key="auto_scan_interval", help="Oto-taramanın kaç saatte bir çalışacağını belirler.")
-    
     st.sidebar.text_input(
         "Profil Adı", key="loadout_name_input", placeholder="Örn: Frontend-TR"
     )
