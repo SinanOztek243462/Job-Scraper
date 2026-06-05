@@ -197,11 +197,9 @@ Skills to categorize:
 
 class SkillExtractor:
     def __init__(self):
-        # Spacy fallback init
+        # Sadece basit NLP işlemleri (gerekirse diye) tutuluyor.
+        # Artık Spacy PhraseMatcher (sabit kelime listesi) kullanmıyoruz.
         self.nlp = get_nlp_model()
-        self.matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
-        patterns = [self.nlp.make_doc(text) for text in TECH_SKILLS]
-        self.matcher.add("SKILLS", patterns)
 
     def extract_skills(self, text):
         api_settings = db.get_api_settings()
@@ -217,16 +215,9 @@ class SkillExtractor:
                     llm_result["skills"] = list(set(llm_result.get("skills", [])))
                     return llm_result
 
-        # Fallback to Spacy
-        doc = self.nlp(text)
-        matches = self.matcher(doc)
-        
-        found_skills = set()
-        for match_id, start, end in matches:
-            span = doc[start:end]
-            found_skills.add(span.text.lower())
-            
-        return {"skills": list(found_skills), "qualifications_text": ""}
+        # Yapay Zeka kapalıysa veya hata verirse, sisteme zorla IT kelimeleri
+        # enjekte etmemek için boş dönüyoruz.
+        return {"skills": [], "qualifications_text": ""}
 
 if __name__ == "__main__":
     extractor = SkillExtractor()
