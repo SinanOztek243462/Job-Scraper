@@ -62,13 +62,12 @@ Job Description:
                 )
                 content = response.choices[0].message.content
             elif provider == "google-genai":
-                from google import genai
-                client = genai.Client(api_key=api_key)
-                model = model_name if model_name else "gemini-2.5-flash"
-                response = client.models.generate_content(
-                    model=model,
-                    contents=prompt,
-                )
+                import google.generativeai as genai
+                from google.api_core.exceptions import ResourceExhausted
+                genai.configure(api_key=api_key)
+                model_name = model_name if model_name else "gemini-2.5-flash"
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
                 content = response.text
             else:
                 return None
@@ -153,13 +152,12 @@ Skills to categorize:
             )
             content = response.choices[0].message.content
         elif provider == "google-genai":
-            from google import genai
-            client = genai.Client(api_key=api_key)
-            model = model_name if model_name else "gemini-2.5-flash"
-            response = client.models.generate_content(
-                model=model,
-                contents=prompt,
-            )
+            import google.generativeai as genai
+            from google.api_core.exceptions import ResourceExhausted
+            genai.configure(api_key=api_key)
+            model_name = model_name if model_name else "gemini-2.5-flash"
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
             content = response.text
         else:
             raise ValueError("Invalid provider")
